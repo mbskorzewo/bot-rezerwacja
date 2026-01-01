@@ -1,0 +1,28 @@
+name: Rezerwacja Treningu
+on:
+  schedule:
+    # 22:01 UTC to 00:01 czasu polskiego (w zimie)
+    - cron: '1 22 * * *'
+  workflow_dispatch: # Pozwala odpalić skrypt ręcznie guzikiem na GitHubie
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v3
+
+      - name: Instalacja Pythona
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Instalacja bibliotek
+        run: |
+          pip install -r requirements.txt
+
+      - name: Uruchomienie skryptu
+        env:
+          WODGURU_EMAIL: ${{ secrets.WODGURU_EMAIL }}
+          WODGURU_PASSWORD: ${{ secrets.WODGURU_PASSWORD }}
+        run: python rez.py
