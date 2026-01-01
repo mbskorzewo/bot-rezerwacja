@@ -12,14 +12,37 @@ from webdriver_manager.chrome import ChromeDriverManager
 # --- POBIERANIE DANYCH Z GITHUB SECRETS ---
 EMAIL = os.getenv("WODGURU_EMAIL")
 HASLO = os.getenv("WODGURU_PASSWORD")
-TARGET_HOURS = ["23:00", "23:30"]
+
+# --- KONFIGURACJA ---
 KLIKNIECIA_STRZALKI = 8 
 
+def get_target_hours():
+    # 0=Pn, 1=Wt, 2=Śr, 3=Cz, 4=Pt, 5=Sb, 6=Nd
+    dzien_tygodnia = datetime.now().weekday()
+    
+    if dzien_tygodnia == 6: # Jest NIEDZIELA 00:01 -> Cel: PONIEDZIAŁEK (+8 dni)
+        print("Cel: Poniedziałek (za 8 dni). Godziny: 16:00, 16:30")
+        return ["16:00", "16:30"]
+        
+    elif dzien_tygodnia == 1: # Jest WTOREK 00:01 -> Cel: ŚRODA (+8 dni)
+        print("Cel: Środa (za 8 dni). Godziny: 19:30, 20:00")
+        return ["19:30", "20:00"]
+        
+    elif dzien_tygodnia == 3: # Jest CZWARTEK 00:01 -> Cel: PIĄTEK (+8 dni)
+        print("Cel: Piątek (za 8 dni). Godziny: 23:00, 23:30")
+        return ["23:00", "23:30"]
+        
+    else:
+        # Awaryjnie, jeśli odpalisz ręcznie w inny dzień
+        print("Dzień poza harmonogramem. Szukam domyślnych godzin.")
+        return ["23:00", "23:30"]
+
 def start_bot():
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] START BOTA W CHMURZE")
+    TARGET_HOURS = get_target_hours()
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] START BOTA")
     
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Serwer nie ma ekranu
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
@@ -45,26 +68,28 @@ def start_bot():
             driver.execute_script("arguments[0].click();", arrow_btn)
             time.sleep(1.5)
 
-        # 3. REZERWACJA
-        found = False
+        # 3. REZERWACJA DWÓCH GODZIN
         for hour in TARGET_HOURS:
             try:
+                print(f"Próba zapisu na: {hour}")
+                # Szukamy wiersza i przycisku
                 xpath_row_btn = f"//tr[contains(., '{hour}')]//button"
                 row_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_row_btn)))
                 driver.execute_script("arguments[0].click();", row_btn)
                 
+                # Przycisk "Zapisz" w oknie
                 confirm_xpath = "//button[contains(@ng-click, 'ctrl.book') and (contains(., 'Zapisz') or contains(., 'ZAPISZ'))]"
                 confirm_btn = wait.until(EC.visibility_of_element_located((By.XPATH, confirm_xpath)))
-                time.sleep(1)
+                time.sleep(1.5)
                 driver.execute_script("arguments[0].click();", confirm_btn)
-                print(f"!!! SUKCES: ZAREZERWOWANO {hour} !!!")
-                found = True
-                break
-            except:
-                continue
-
-        if not found:
-            print("Nie znaleziono terminu.")
+                
+                print(f"SUKCES: Zapisano na {hour}")
+                
+                # Krótka pauza przed szukaniem drugiej godziny
+                time.sleep(3)
+                
+            except Exception as e:
+                print(f"Pominięto {hour} (może już zapisany lub brak miejsc): {e}")
 
     except Exception as e:
         print(f"Błąd: {e}")
