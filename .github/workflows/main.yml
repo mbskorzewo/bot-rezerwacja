@@ -31,6 +31,6 @@ jobs:
 
       - name: Uruchomienie skryptu rezerwacji
         env:
-          W_EMAIL: ${{ secrets.WODGURU_EMAIL }}
-          W_PASSWORD: ${{ secrets.WODGURU_PASSWORD }}
+          WODGURU_EMAIL: ${{ secrets.WODGURU_EMAIL }}
+          WODGURU_PASSWORD: ${{ secrets.WODGURU_PASSWORD }}
         run: python rez.py
