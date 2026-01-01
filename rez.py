@@ -18,31 +18,30 @@ KLIKNIECIA_STRZALKI = 8
 
 def get_target_hours():
     # 0=Pn, 1=Wt, 2=Śr, 3=Cz, 4=Pt, 5=Sb, 6=Nd
+    # UWAGA: Skrypt startuje o 21:30, więc sprawdzamy dzień "wieczorny"
     dzien_tygodnia = datetime.now().weekday()
     
-    if dzien_tygodnia == 6: # NIEDZIELA 00:01 -> Cel: PONIEDZIAŁEK
-        print("Cel: Poniedziałek (za 8 dni). Godziny: 16:00, 16:30")
+    if dzien_tygodnia == 6: # NIEDZIELA 21:30 -> Cel: PONIEDZIAŁEK (+8 dni)
+        print("Logika: Niedziela wieczór. Cel: Poniedziałek. Godziny: 16:00, 16:30")
         return ["16:00", "16:30"]
         
-    elif dzien_tygodnia == 1: # WTOREK 00:01 -> Cel: ŚRODA
-        print("Cel: Środa (za 8 dni). Godziny: 19:30, 20:00")
+    elif dzien_tygodnia == 1: # WTOREK 21:30 -> Cel: ŚRODA (+8 dni)
+        print("Logika: Wtorek wieczór. Cel: Środa. Godziny: 19:30, 20:00")
         return ["19:30", "20:00"]
         
-    elif dzien_tygodnia == 3: # CZWARTEK 00:01 -> Cel: PIĄTEK
-        print("Cel: Piątek (za 8 dni). Godziny: 09:00, 09:30")
+    elif dzien_tygodnia == 3: # CZWARTEK 21:30 -> Cel: PIĄTEK (+8 dni)
+        print("Logika: Czwartek wieczór. Cel: Piątek. Godziny: 09:00, 09:30")
         return ["09:00", "09:30"]
-        
-    else:
-        print("Dzień poza harmonogramem treningowym.")
-        return []
+    
+    print("Dzień poza harmonogramem (brak przypisanych godzin).")
+    return []
 
 def start_bot():
     TARGET_HOURS = get_target_hours()
     if not TARGET_HOURS:
-        print("Brak zaplanowanych treningów na ten dzień. Kończę.")
         return
 
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] START BOTA")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] URUCHOMIENIE REZERWACJI")
     
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -60,9 +59,9 @@ def start_bot():
         driver.find_element(By.NAME, "credential").send_keys(HASLO)
         login_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']")))
         driver.execute_script("arguments[0].click();", login_btn)
-        print("Zalogowano.")
+        print("Zalogowano pomyślnie.")
 
-        # 2. PRZECHODZENIE DO DATY
+        # 2. PRZECHODZENIE DO DATY (8 kliknięć)
         wait.until(EC.presence_of_element_located((By.CLASS_NAME, "guru-table")))
         arrow_xpath = "//md-icon[contains(text(), 'keyboard_arrow_right')]/parent::button"
         
@@ -70,29 +69,32 @@ def start_bot():
             arrow_btn = wait.until(EC.element_to_be_clickable((By.XPATH, arrow_xpath)))
             driver.execute_script("arguments[0].click();", arrow_btn)
             time.sleep(1.5)
+        print(f"Przesunięto kalendarz o {KLIKNIECIA_STRZALKI} dni.")
 
-        # 3. REZERWACJA DWÓCH GODZIN
+        # 3. REZERWACJA DWÓCH TERMINÓW
         for hour in TARGET_HOURS:
             try:
-                print(f"Próba zapisu na: {hour}")
+                print(f"Szukanie godziny: {hour}...")
                 xpath_row_btn = f"//tr[contains(., '{hour}')]//button"
                 row_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_row_btn)))
                 driver.execute_script("arguments[0].click();", row_btn)
                 
+                # Kliknięcie "Zapisz" w wyskakującym oknie
                 confirm_xpath = "//button[contains(@ng-click, 'ctrl.book') and (contains(., 'Zapisz') or contains(., 'ZAPISZ'))]"
                 confirm_btn = wait.until(EC.visibility_of_element_located((By.XPATH, confirm_xpath)))
                 time.sleep(1.5)
                 driver.execute_script("arguments[0].click();", confirm_btn)
                 
-                print(f"SUKCES: Zapisano na {hour}")
-                time.sleep(3)
+                print(f"POTWIERDZONO REZERWACJĘ: {hour}")
+                time.sleep(3) # Pauza przed szukaniem kolejnej godziny
                 
             except Exception as e:
-                print(f"Pominięto {hour} (może już zapisany lub brak miejsc): {e}")
+                print(f"Nie udało się zarezerwować {hour} (może brak miejsc lub błąd): {e}")
 
     except Exception as e:
-        print(f"Błąd: {e}")
+        print(f"Błąd krytyczny: {e}")
     finally:
+        print("Kończenie pracy bota.")
         driver.quit()
 
 if __name__ == "__main__":
