@@ -2,11 +2,12 @@ name: Rezerwacja Treningu (Pn-Sr-Pt)
 
 on:
   schedule:
-    # 20:30 UTC = 21:30 czasu polskiego (w zimie)
+    # 20:28 UTC = 21:28 czasu polskiego (w zimie)
     # Dni tygodnia: 0 (Nd), 2 (Wt), 4 (Cz)
-    - cron: '30 20 * * 0,2,4'
+    # Startujemy 2 minuty wcześniej, aby skrypt zdążył się zalogować i czekać na przycisk
+    - cron: '28 20 * * 0,2,4'
   
-  workflow_dispatch:
+  workflow_dispatch: # Pozwala na ręczne uruchomienie w dowolnym momencie
 
 jobs:
   build:
